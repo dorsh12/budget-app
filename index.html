@@ -345,25 +345,24 @@ function get(){
 
 /* חודשים */
 
-function createMonth(){
+async function createMonth(){
 
-    const name =
-    prompt("שם חודש חדש");
-
+    const name = prompt("חודש חדש (MM-YYYY)");
     if(!name) return;
 
-    const currentCategories =
-    [...get().categories];
+    const lastKey = Object.keys(months).pop();
 
     months[name] = {
-        income:0,
-        categories:currentCategories,
-        expenses:[]
+        income: 0,
+        categories: lastKey ? [...months[lastKey].categories] : [],
+        expenses: []
     };
 
     currentMonth = name;
 
-    save();
+    // 👇 שמירה ישירה ל-Firebase
+    await db.collection("months").doc(name).set(months[name]);
+
     renderAll();
 }
 
@@ -806,10 +805,9 @@ function renderAll(){
         months[doc.id] = doc.data();
     });
 
-    if (!currentMonth) {
-        currentMonth = Object.keys(months)[0] || null;
-    }
-
+currentMonth = currentMonth && months[currentMonth]
+    ? currentMonth
+    : Object.keys(months).sort().pop() || null;
     renderAll();
 }
 

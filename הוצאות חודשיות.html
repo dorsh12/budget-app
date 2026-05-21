@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>מערכת הוצאות חודשיות</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+body{
+    background:#f4f6fb;
+    font-family:Arial;
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* HEADER */
+
+.main-header{
+    background:linear-gradient(135deg,#357bd8,#5a9cff);
+    color:white;
+    padding:25px;
+    text-align:center;
+    box-shadow:0 4px 15px rgba(0,0,0,0.12);
+}
+
+.main-header h1{
+    margin:0;
+    font-size:32px;
+    font-weight:bold;
+}
+
+.main-header p{
+    margin:6px 0 0;
+    opacity:0.9;
+}
+
+/* MAIN */
+
+.main-content{
+    flex:1;
+}
+
+.card{
+    border:none;
+    border-radius:18px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    margin-bottom:15px;
+}
+
+.month-card{
+    background:white;
+    padding:10px;
+    border-radius:12px;
+    min-width:140px;
+    border:2px solid transparent;
+}
+
+.active-month{
+    border-color:#357bd8;
+    background:#eef5ff;
+}
+
+.summary-wrapper{
+    display:flex;
+    gap:12px;
+    margin-bottom:15px;
+}
+
+.summary-card{
+    flex:1;
+    background:white;
+    border-radius:18px;
+    padding:18px;
+    text-align:center;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+}
+
+.summary-number{
+    font-size:24px;
+    font-weight:bold;
+    color:#357bd8;
+}
+
+.category-tag{
+    background:white;
+    border:1px solid #dbe6ff;
+    border-radius:12px;
+    padding:10px;
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.category-left{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:bold;
+}
+
+.category-icon{
+    font-size:18px;
+}
+
+.category-box{
+    background:white;
+    padding:14px;
+    border-radius:16px;
+    margin-bottom:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.05);
+}
+
+.category-header{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:10px;
+    font-weight:bold;
+}
+
+.expense-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid #eee;
+}
+
+.expense-row:last-child{
+    border-bottom:none;
+}
+
+.edit-inline{
+    display:flex;
+    gap:8px;
+    width:100%;
+}
+
+.footer{
+    margin-top:40px;
+    background:#1f2937;
+    color:white;
+    text-align:center;
+    padding:18px;
+    font-size:14px;
+}
+
+.btn-circle{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+
+<header class="main-header">
+    <h1>💸 הוצאות חודשיות</h1>
+    <p>ניהול תקציב חכם בצורה פשוטה ונוחה</p>
+</header>
+
+<!-- CONTENT -->
+
+<div class="container mt-4 main-content">
+
+<!-- חודשים -->
+
+<div class="card p-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">📅 חודשים</h5>
+
+        <button class="btn btn-primary btn-sm"
+        onclick="createMonth()">
+            + חודש
+        </button>
+    </div>
+
+    <div id="monthsContainer" class="d-flex gap-2 flex-wrap"></div>
+
+</div>
+
+<!-- סיכומים -->
+
+<div class="summary-wrapper">
+
+    <div class="summary-card">
+        <div>💰 נטו חודשי</div>
+        <div class="summary-number" id="netIncomeDisplay">0 ₪</div>
+    </div>
+
+    <div class="summary-card">
+        <div>💸 חיסכון חודשי</div>
+        <div class="summary-number" id="monthlySaving">0 ₪</div>
+    </div>
+
+    <div class="summary-card">
+        <div>🏦 חיסכון כולל</div>
+        <div class="summary-number" id="globalSaving">0 ₪</div>
+    </div>
+
+</div>
+
+<!-- חיפוש -->
+
+<div class="card p-3">
+    <input
+        id="searchInput"
+        class="form-control"
+        placeholder="🔍 חיפוש הוצאות"
+        oninput="renderExpenses()"
+    >
+</div>
+
+<!-- נטו -->
+
+<div class="card p-3">
+
+    <input
+        id="incomeInput"
+        type="number"
+        class="form-control mb-2"
+        placeholder="הכנס נטו חודשי"
+    >
+
+    <button class="btn btn-primary w-100"
+    onclick="saveIncome()">
+        שמירת נטו
+    </button>
+
+</div>
+
+<!-- קטגוריות -->
+
+<div class="card p-3">
+
+    <div class="d-flex gap-2 mb-3">
+
+        <input
+            id="catInput"
+            class="form-control"
+            placeholder="קטגוריה חדשה"
+        >
+
+        <button class="btn btn-dark"
+        onclick="addCategory()">
+            +
+        </button>
+
+    </div>
+
+    <div id="catList"></div>
+
+</div>
+
+<!-- הוספת הוצאה -->
+
+<div class="card p-3">
+
+    <input id="expName"
+    class="form-control mb-2"
+    placeholder="שם הוצאה">
+
+    <input id="expAmount"
+    type="number"
+    class="form-control mb-2"
+    placeholder="סכום">
+
+    <select id="expCategory"
+    class="form-control mb-2"></select>
+
+    <button class="btn btn-success w-100"
+    onclick="addExpense()">
+        הוספת הוצאה
+    </button>
+
+</div>
+
+<!-- הוצאות -->
+
+<div id="groupedView"></div>
+
+</div>
+
+<!-- FOOTER -->
+
+<footer class="footer">
+    © 2026 מערכת הוצאות חודשיות | כל הזכויות שמורות
+</footer>
+
+<script>
+
+let months =
+JSON.parse(localStorage.getItem("months")) || {};
+
+let currentMonth =
+localStorage.getItem("currentMonth");
+
+function init(){
+
+    if(!currentMonth){
+
+        const d = new Date();
+
+        currentMonth =
+        `${d.getMonth()+1}-${d.getFullYear()}`;
+    }
+
+    if(!months[currentMonth]){
+
+        months[currentMonth] = {
+            income:0,
+            categories:[],
+            expenses:[]
+        };
+    }
+}
+
+init();
+
+function save(){
+
+    localStorage.setItem(
+        "months",
+        JSON.stringify(months)
+    );
+
+    localStorage.setItem(
+        "currentMonth",
+        currentMonth
+    );
+}
+
+function get(){
+    return months[currentMonth];
+}
+
+/* חודשים */
+
+function createMonth(){
+
+    const name =
+    prompt("שם חודש חדש");
+
+    if(!name) return;
+
+    const currentCategories =
+    [...get().categories];
+
+    months[name] = {
+        income:0,
+        categories:currentCategories,
+        expenses:[]
+    };
+
+    currentMonth = name;
+
+    save();
+    renderAll();
+}
+
+function switchMonth(month){
+
+    currentMonth = month;
+
+    save();
+    renderAll();
+}
+
+function editMonth(month){
+
+    const newName =
+    prompt("עריכת חודש", month);
+
+    if(!newName || months[newName]) return;
+
+    months[newName] = months[month];
+
+    delete months[month];
+
+    if(currentMonth === month){
+        currentMonth = newName;
+    }
+
+    save();
+    renderAll();
+}
+
+function deleteMonth(month){
+
+    if(!confirm("למחוק חודש?")) return;
+
+    delete months[month];
+
+    const keys =
+    Object.keys(months);
+
+    if(keys.length){
+        currentMonth = keys[0];
+    }else{
+        currentMonth = null;
+        init();
+    }
+
+    save();
+    renderAll();
+}
+
+function renderMonths(){
+
+    const el =
+    document.getElementById("monthsContainer");
+
+    el.innerHTML = "";
+
+    Object.keys(months).forEach(month=>{
+
+        el.innerHTML += `
+
+        <div class="month-card ${month===currentMonth?'active-month':''}">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div style="cursor:pointer"
+                onclick="switchMonth('${month}')">
+                    📅 ${month}
+                </div>
+
+                <div class="d-flex gap-1">
+
+                    <button
+                    class="btn btn-outline-primary btn-sm btn-circle"
+                    onclick="editMonth('${month}')">
+                        ✏️
+                    </button>
+
+                    <button
+                    class="btn btn-outline-danger btn-sm btn-circle"
+                    onclick="deleteMonth('${month}')">
+                        🗑️
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+        `;
+    });
+}
+
+/* נטו */
+
+function saveIncome(){
+
+    get().income =
+    Number(
+        document.getElementById("incomeInput").value
+    ) || 0;
+
+    document.getElementById("incomeInput").value="";
+
+    save();
+    renderSummary();
+}
+
+/* קטגוריות */
+
+function addCategory(){
+
+    const val =
+    document.getElementById("catInput")
+    .value.trim();
+
+    if(!val) return;
+
+    if(!get().categories.includes(val)){
+
+        get().categories.push(val);
+    }
+
+    document.getElementById("catInput").value="";
+
+    save();
+    renderAll();
+}
+
+function editCategory(index){
+
+    const old =
+    get().categories[index];
+
+    const updated =
+    prompt("עריכת קטגוריה", old);
+
+    if(!updated) return;
+
+    get().categories[index] = updated;
+
+    get().expenses.forEach(exp=>{
+
+        if(exp.category === old){
+            exp.category = updated;
+        }
+    });
+
+    save();
+    renderAll();
+}
+
+function deleteCategory(index){
+
+    const category =
+    get().categories[index];
+
+    get().categories.splice(index,1);
+
+    get().expenses =
+    get().expenses.filter(
+        e=>e.category !== category
+    );
+
+    save();
+    renderAll();
+}
+
+function renderCategories(){
+
+    const list =
+    document.getElementById("catList");
+
+    const select =
+    document.getElementById("expCategory");
+
+    list.innerHTML = "";
+    select.innerHTML =
+    `<option value="">בחרי קטגוריה</option>`;
+
+    get().categories.forEach((cat,index)=>{
+
+        list.innerHTML += `
+
+        <div class="category-tag">
+
+            <div class="category-left">
+                <span class="category-icon">📂</span>
+                ${cat}
+            </div>
+
+            <div class="d-flex gap-1">
+
+                <button
+                class="btn btn-outline-primary btn-sm btn-circle"
+                onclick="editCategory(${index})">
+                    ✏️
+                </button>
+
+                <button
+                class="btn btn-outline-danger btn-sm btn-circle"
+                onclick="deleteCategory(${index})">
+                    🗑️
+                </button>
+
+            </div>
+
+        </div>
+        `;
+
+        select.innerHTML += `
+        <option>${cat}</option>`;
+    });
+}
+
+/* הוצאות */
+
+function addExpense(){
+
+    const name =
+    document.getElementById("expName").value;
+
+    const amount =
+    Number(
+        document.getElementById("expAmount").value
+    );
+
+    const category =
+    document.getElementById("expCategory").value;
+
+    if(!name || !amount || !category) return;
+
+    get().expenses.push({
+        id:Date.now(),
+        name,
+        amount,
+        category
+    });
+
+    document.getElementById("expName").value="";
+    document.getElementById("expAmount").value="";
+
+    save();
+    renderAll();
+}
+
+function deleteExpense(id){
+
+    get().expenses =
+    get().expenses.filter(e=>e.id!==id);
+
+    save();
+    renderAll();
+}
+
+function renderExpenses(){
+
+    const container =
+    document.getElementById("groupedView");
+
+    const search =
+    document.getElementById("searchInput")
+    .value.toLowerCase();
+
+    container.innerHTML = "";
+
+    get().categories.forEach(cat=>{
+
+        const items =
+        get().expenses.filter(e=>
+
+            e.category===cat &&
+
+            (
+                e.name.toLowerCase().includes(search)
+                ||
+                String(e.amount).includes(search)
+            )
+        );
+
+        if(!items.length) return;
+
+        const total =
+        items.reduce((a,b)=>a+b.amount,0);
+
+        let html = `
+
+        <div class="category-box">
+
+            <div class="category-header">
+                <span>📂 ${cat}</span>
+                <span>${total} ₪</span>
+            </div>
+        `;
+
+        items.forEach(e=>{
+
+            html += `
+
+            <div class="expense-row"
+            id="expense-${e.id}">
+
+                <div>
+                    ${e.name} - ${e.amount} ₪
+                </div>
+
+                <div class="d-flex gap-1">
+
+                    <button
+                    class="btn btn-outline-primary btn-sm btn-circle"
+                    onclick="inlineEditExpense(${e.id})">
+                        ✏️
+                    </button>
+
+                    <button
+                    class="btn btn-outline-danger btn-sm btn-circle"
+                    onclick="deleteExpense(${e.id})">
+                        🗑️
+                    </button>
+
+                </div>
+
+            </div>
+            `;
+        });
+
+        html += `</div>`;
+
+        container.innerHTML += html;
+    });
+
+    renderSummary();
+}
+
+function inlineEditExpense(id){
+
+    const expense =
+    get().expenses.find(e=>e.id===id);
+
+    const row =
+    document.getElementById(`expense-${id}`);
+
+    row.innerHTML = `
+
+    <div class="edit-inline">
+
+        <input
+        id="edit-name-${id}"
+        class="form-control"
+        value="${expense.name}">
+
+        <input
+        id="edit-amount-${id}"
+        type="number"
+        class="form-control"
+        value="${expense.amount}">
+
+        <button
+        class="btn btn-success"
+        onclick="saveExpenseEdit(${id})">
+            שמור
+        </button>
+
+    </div>
+    `;
+}
+
+function saveExpenseEdit(id){
+
+    const expense =
+    get().expenses.find(e=>e.id===id);
+
+    expense.name =
+    document.getElementById(`edit-name-${id}`).value;
+
+    expense.amount =
+    Number(
+        document.getElementById(`edit-amount-${id}`).value
+    );
+
+    save();
+    renderAll();
+}
+
+/* סיכומים */
+
+function renderSummary(){
+
+    const totalExpenses =
+    get().expenses.reduce(
+        (sum,e)=>sum+e.amount,
+        0
+    );
+
+    const monthlySaving =
+    get().income - totalExpenses;
+
+    let globalSaving = 0;
+
+    Object.values(months).forEach(month=>{
+
+        const exp =
+        month.expenses.reduce(
+            (s,e)=>s+e.amount,
+            0
+        );
+
+        globalSaving +=
+        (month.income - exp);
+    });
+
+    document.getElementById("netIncomeDisplay")
+    .innerText =
+    get().income + " ₪";
+
+    document.getElementById("monthlySaving")
+    .innerText =
+    monthlySaving + " ₪";
+
+    document.getElementById("globalSaving")
+    .innerText =
+    globalSaving + " ₪";
+}
+
+/* MAIN */
+
+function renderAll(){
+
+    renderMonths();
+    renderCategories();
+    renderExpenses();
+    renderSummary();
+}
+
+renderAll();
+
+</script>
+
+</body>
+</html>

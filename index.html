@@ -334,9 +334,10 @@ init();
 function save() {
     if (!currentMonth) return;
 
-    db.collection("months").doc(currentMonth).set(months[currentMonth]);
+    db.collection("months")
+      .doc(currentMonth)
+      .set(months[currentMonth], { merge: true });
 }
-
 /* חודשים */
 
 async function createMonth() {

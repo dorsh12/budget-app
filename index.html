@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -304,11 +306,8 @@ body{
 
 <script>
 
-let months =
-JSON.parse(localStorage.getItem("months")) || {};
-
-let currentMonth =
-localStorage.getItem("currentMonth");
+let months = {};
+let currentMonth = null;
 
 function init(){
 
@@ -332,17 +331,12 @@ function init(){
 
 init();
 
-function save(){
+function save() {
+    if (!currentMonth) return;
 
-    localStorage.setItem(
-        "months",
-        JSON.stringify(months)
-    );
-
-    localStorage.setItem(
-        "currentMonth",
-        currentMonth
-    );
+    db.collection("months")
+      .doc(currentMonth)
+      .set(months[currentMonth]);
 }
 
 function get(){
@@ -803,9 +797,37 @@ function renderAll(){
     renderExpenses();
     renderSummary();
 }
+    async function loadData() {
+    const snap = await db.collection("months").get();
+
+    months = {};
+
+    snap.forEach(doc => {
+        months[doc.id] = doc.data();
+    });
+
+    if (!currentMonth) {
+        currentMonth = Object.keys(months)[0] || null;
+    }
+
+    renderAll();
+}
 
 renderAll();
 
+    const firebaseConfig = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+    loadData();
 </script>
 
 </body>

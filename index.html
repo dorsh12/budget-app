@@ -4,37 +4,59 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>מערכת תקציב חכמה</title>
+<title>מערכת תקציב</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<!-- ================= FIREBASE ================= -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "..."
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-</script>
-
 <style>
-body{background:#f4f6fb;font-family:Arial}
-.card{border:none;border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,0.08);margin-bottom:15px}
-.month-card{background:white;padding:10px;border-radius:12px;min-width:120px;cursor:pointer;border:2px solid transparent}
-.active-month{border-color:#357bd8;background:#eef5ff}
-.summary-number{font-size:22px;font-weight:bold;color:#357bd8}
-.tag{background:#e8eefc;padding:5px 10px;border-radius:12px;display:inline-flex;gap:5px;margin:3px}
-.category-box{background:white;padding:12px;border-radius:14px;margin-bottom:10px}
-.category-header{display:flex;justify-content:space-between;font-weight:bold}
-.expense-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
-</style>
+body{
+    background:#f4f6fb;
+    font-family:Arial;
+}
 
+.card{
+    border:none;
+    border-radius:16px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    margin-bottom:12px;
+}
+
+.month-card{
+    background:white;
+    padding:10px;
+    border-radius:10px;
+    cursor:pointer;
+    border:2px solid transparent;
+    min-width:120px;
+}
+
+.active-month{
+    border-color:#357bd8;
+    background:#eef5ff;
+}
+
+.summary-number{
+    font-size:22px;
+    font-weight:bold;
+    color:#357bd8;
+}
+
+.tag{
+    background:#e8eefc;
+    padding:5px 10px;
+    border-radius:12px;
+    display:inline-flex;
+    gap:5px;
+    margin:3px;
+}
+
+.category-box{
+    background:white;
+    padding:12px;
+    border-radius:12px;
+    margin-bottom:10px;
+}
+</style>
 </head>
 
 <body>
@@ -50,12 +72,13 @@ body{background:#f4f6fb;font-family:Arial}
   <div id="monthsContainer" class="d-flex gap-2 flex-wrap"></div>
 </div>
 
-<!-- נטו וחיסכון -->
+<!-- נטו -->
 <div class="card p-3 text-center">
   <div>💰 נטו</div>
   <div class="summary-number" id="netIncome">0 ₪</div>
 </div>
 
+<!-- חיסכון -->
 <div class="card p-3 text-center">
   <div>💸 חיסכון</div>
   <div class="summary-number" id="saving">0 ₪</div>
@@ -70,11 +93,11 @@ body{background:#f4f6fb;font-family:Arial}
 <!-- קטגוריות -->
 <div class="card p-3">
   <input id="catInput" class="form-control mb-2" placeholder="קטגוריה">
-  <button class="btn btn-dark w-100" onclick="addCategory()">הוספת קטגוריה</button>
+  <button class="btn btn-dark w-100" onclick="addCategory()">הוסף קטגוריה</button>
   <div id="catList" class="mt-2"></div>
 </div>
 
-<!-- הוצאה -->
+<!-- הוצאות -->
 <div class="card p-3">
   <input id="expName" class="form-control mb-2" placeholder="שם הוצאה">
   <input id="expAmount" class="form-control mb-2" type="number" placeholder="סכום">
@@ -88,196 +111,185 @@ body{background:#f4f6fb;font-family:Arial}
 
 <script>
 
-let months = {};
-let currentMonth = null;
+let months = JSON.parse(localStorage.getItem("months")) || {};
+let currentMonth = localStorage.getItem("currentMonth");
 let editId = null;
 
-/* ================= LOAD ================= */
-async function loadData() {
-  const snap = await db.collection("months").get();
+/* INIT */
+function init(){
+    if(!currentMonth || !months[currentMonth]){
+        const d = new Date();
+        currentMonth = `${d.getMonth()+1}-${d.getFullYear()}`;
 
-  months = {};
-  snap.forEach(doc => months[doc.id] = doc.data());
+        months[currentMonth] = {
+            income:0,
+            categories:[],
+            expenses:[]
+        };
+    }
+}
+init();
 
-  if (!currentMonth || !months[currentMonth]) {
-    currentMonth = Object.keys(months)[0] || null;
-  }
+/* SAVE */
+function save(){
+    localStorage.setItem("months", JSON.stringify(months));
+    localStorage.setItem("currentMonth", currentMonth);
+}
 
-  if (!currentMonth) {
-    const d = new Date();
-    currentMonth = `${d.getMonth()+1}-${d.getFullYear()}`;
+/* GET */
+function get(){
+    return months[currentMonth];
+}
 
-    months[currentMonth] = {
-      income:0,
-      categories:[],
-      expenses:[]
+/* MONTHS */
+function createMonth(){
+    const name = prompt("חודש (MM-YYYY)");
+    if(!name) return;
+
+    const last = getLastCategories();
+
+    months[name] = {
+        income:0,
+        categories:[...last],
+        expenses:[]
     };
 
-    await saveToFirebase();
-  }
-
-  renderAll();
+    currentMonth = name;
+    save();
+    renderAll();
 }
 
-/* ================= SAVE ================= */
-async function saveToFirebase() {
-  if (!currentMonth) return;
+function getLastCategories(){
+    const keys = Object.keys(months);
+    if(!keys.length) return [];
 
-  await db.collection("months")
-    .doc(currentMonth)
-    .set(months[currentMonth], { merge:true });
+    return months[keys[keys.length-1]].categories || [];
 }
 
-/* ================= MONTH ================= */
-async function createMonth() {
-  const name = prompt("חודש (MM-YYYY)");
-  if (!name) return;
-
-  const last = Object.values(months)[0]?.categories || [];
-
-  months[name] = {
-    income:0,
-    categories:[...last],
-    expenses:[]
-  };
-
-  currentMonth = name;
-
-  await saveToFirebase();
-  renderAll();
+function switchMonth(m){
+    currentMonth = m;
+    save();
+    renderAll();
 }
 
-function switchMonth(m) {
-  currentMonth = m;
-  renderAll();
+/* INCOME */
+function saveIncome(){
+    get().income = Number(incomeInput.value) || 0;
+    incomeInput.value = "";
+    save();
+    renderAll();
 }
 
-/* ================= INCOME ================= */
-async function saveIncome() {
-  months[currentMonth].income =
-    Number(document.getElementById("incomeInput").value) || 0;
+/* CATEGORY */
+function addCategory(){
+    const val = catInput.value.trim();
+    if(!val) return;
 
-  await saveToFirebase();
-  renderAll();
+    const m = get();
+    if(!m.categories.includes(val)){
+        m.categories.push(val);
+    }
+
+    catInput.value = "";
+    save();
+    renderAll();
 }
 
-/* ================= CATEGORY ================= */
-async function addCategory() {
-  const val = catInput.value.trim();
-  if (!val) return;
+/* EXPENSE */
+function addExpense(){
+    const m = get();
 
-  if (!months[currentMonth].categories.includes(val)) {
-    months[currentMonth].categories.push(val);
-  }
+    const name = expName.value;
+    const amount = Number(expAmount.value);
+    const cat = expCategory.value;
 
-  catInput.value = "";
+    if(!name || !amount || !cat) return;
 
-  await saveToFirebase();
-  renderAll();
-}
-
-/* ================= EXPENSE ================= */
-async function addExpense() {
-  const m = months[currentMonth];
-
-  const name = expName.value;
-  const amount = Number(expAmount.value);
-  const cat = expCategory.value;
-
-  if (!name || !amount || !cat) return;
-
-  m.expenses.push({
-    id:Date.now(),
-    name,
-    amount,
-    category:cat
-  });
-
-  expName.value = "";
-  expAmount.value = "";
-
-  await saveToFirebase();
-  renderAll();
-}
-
-/* ================= RENDER ================= */
-function renderAll() {
-  renderMonths();
-  renderCategories();
-  renderExpenses();
-  renderSummary();
-}
-
-function renderMonths() {
-  monthsContainer.innerHTML = "";
-
-  Object.keys(months).forEach(m => {
-    monthsContainer.innerHTML += `
-      <div class="month-card ${m===currentMonth?'active-month':''}"
-      onclick="switchMonth('${m}')">
-      📅 ${m}
-      </div>`;
-  });
-}
-
-function renderCategories() {
-  const m = months[currentMonth];
-
-  catList.innerHTML = "";
-  expCategory.innerHTML = "";
-
-  if (!m) return;
-
-  m.categories.forEach(c=>{
-    catList.innerHTML += `<div class="tag">${c}</div>`;
-    expCategory.innerHTML += `<option>${c}</option>`;
-  });
-}
-
-function renderExpenses() {
-  const m = months[currentMonth];
-  groupedView.innerHTML = "";
-
-  if (!m) return;
-
-  m.categories.forEach(cat=>{
-    const items = m.expenses.filter(e=>e.category===cat);
-
-    if (!items.length) return;
-
-    const sum = items.reduce((a,b)=>a+b.amount,0);
-
-    let html = `
-    <div class="category-box">
-      <div class="category-header">
-        <span>${cat}</span>
-        <span>${sum} ₪</span>
-      </div>`;
-
-    items.forEach(e=>{
-      html += `<div class="expense-row">
-        ${e.name} - ${e.amount} ₪
-      </div>`;
+    m.expenses.push({
+        id:Date.now(),
+        name,
+        amount,
+        category:cat
     });
 
-    html += `</div>`;
-    groupedView.innerHTML += html;
-  });
+    expName.value="";
+    expAmount.value="";
+
+    save();
+    renderAll();
 }
 
-function renderSummary() {
-  const m = months[currentMonth];
-  if (!m) return;
-
-  const total = m.expenses.reduce((s,e)=>s+e.amount,0);
-  const saving = m.income - total;
-
-  netIncome.innerText = m.income + " ₪";
-  saving.innerText = saving + " ₪";
+/* RENDER */
+function renderAll(){
+    renderMonths();
+    renderCategories();
+    renderExpenses();
+    renderSummary();
 }
 
-/* ================= START ================= */
-loadData();
+function renderMonths(){
+    monthsContainer.innerHTML = "";
+
+    Object.keys(months).forEach(m=>{
+        monthsContainer.innerHTML += `
+        <div class="month-card ${m===currentMonth?'active-month':''}"
+        onclick="switchMonth('${m}')">
+        📅 ${m}
+        </div>`;
+    });
+}
+
+function renderCategories(){
+    const m = get();
+
+    catList.innerHTML = "";
+    expCategory.innerHTML = "";
+
+    if(!m) return;
+
+    m.categories.forEach(c=>{
+        catList.innerHTML += `<div class="tag">${c}</div>`;
+        expCategory.innerHTML += `<option>${c}</option>`;
+    });
+}
+
+function renderExpenses(){
+    const m = get();
+    groupedView.innerHTML = "";
+
+    if(!m) return;
+
+    m.categories.forEach(cat=>{
+        const items = m.expenses.filter(e=>e.category===cat);
+        if(!items.length) return;
+
+        const sum = items.reduce((a,b)=>a+b.amount,0);
+
+        let html = `<div class="category-box">
+        <b>${cat}</b> — ${sum} ₪<br>`;
+
+        items.forEach(e=>{
+            html += `${e.name} - ${e.amount} ₪<br>`;
+        });
+
+        html += `</div>`;
+        groupedView.innerHTML += html;
+    });
+}
+
+/* SUMMARY */
+function renderSummary(){
+    const m = get();
+    if(!m) return;
+
+    const total = m.expenses.reduce((s,e)=>s+e.amount,0);
+
+    netIncome.innerText = m.income + " ₪";
+    saving.innerText = (m.income - total) + " ₪";
+}
+
+/* START */
+renderAll();
 
 </script>
 

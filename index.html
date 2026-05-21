@@ -803,6 +803,10 @@ async function loadData() {
         months[doc.id] = doc.data();
     });
 
+    if (!currentMonth && Object.keys(months).length > 0) {
+        currentMonth = Object.keys(months)[0];
+    }
+
     renderAll();
 }
 
@@ -819,7 +823,14 @@ renderAll();
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
+function saveToFirebase() {
+    db.collection("months")
+      .doc(currentMonth)
+      .set(months[currentMonth], { merge: true });
+}
+    
+    save();
+    saveToFirebase();
     loadData();
 </script>
 

@@ -336,7 +336,7 @@ function save() {
 
     db.collection("months")
       .doc(currentMonth)
-      .set(months[currentMonth]);
+      .set(months[currentMonth], { merge: true });
 }
 
 function get(){
@@ -796,7 +796,7 @@ function renderAll(){
     renderExpenses();
     renderSummary();
 }
-    async function loadData() {
+async function loadData() {
     const snap = await db.collection("months").get();
 
     months = {};
@@ -805,9 +805,17 @@ function renderAll(){
         months[doc.id] = doc.data();
     });
 
-currentMonth = currentMonth && months[currentMonth]
-    ? currentMonth
-    : Object.keys(months).sort().pop() || null;
+    const keys = Object.keys(months);
+
+    currentMonth =
+        currentMonth && months[currentMonth]
+            ? currentMonth
+            : keys.sort((a,b)=>{
+                const [ma,ya]=a.split("-").map(Number);
+                const [mb,yb]=b.split("-").map(Number);
+                return new Date(ya,ma-1)-new Date(yb,mb-1);
+            }).pop() || null;
+
     renderAll();
 }
 

@@ -334,23 +334,21 @@ init();
 function save() {
     if (!currentMonth) return;
 
-    db.collection("months")
-      .doc(currentMonth)
-      .set(months[currentMonth], { merge: true });
-}
-
-function get(){
-    return months[currentMonth];
+    db.collection("months").doc(currentMonth).set(months[currentMonth]);
 }
 
 /* חודשים */
 
-async function createMonth(){
+async function createMonth() {
 
     const name = prompt("חודש חדש (MM-YYYY)");
-    if(!name) return;
+    if (!name) return;
 
-    const lastKey = Object.keys(months).pop();
+    const lastKey = Object.keys(months).sort((a,b)=>{
+        const [ma,ya]=a.split("-").map(Number);
+        const [mb,yb]=b.split("-").map(Number);
+        return new Date(ya,ma-1)-new Date(yb,mb-1);
+    }).pop();
 
     months[name] = {
         income: 0,
@@ -360,7 +358,7 @@ async function createMonth(){
 
     currentMonth = name;
 
-    // 👇 שמירה ישירה ל-Firebase
+    // 🔥 שמירה בטוחה
     await db.collection("months").doc(name).set(months[name]);
 
     renderAll();
@@ -797,6 +795,7 @@ function renderAll(){
     renderSummary();
 }
 async function loadData() {
+
     const snap = await db.collection("months").get();
 
     months = {};
